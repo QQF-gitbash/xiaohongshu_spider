@@ -10,6 +10,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+import random
 
 from browser.dp_manager import DPManager
 from browser.feed_harvester import FeedHarvester
@@ -76,7 +77,8 @@ async def main(KEYWORD,MAX_NOTES):
             except Exception as e:
                 w.writerow([nid, f"ERROR: {e}"])
                 print(f"[{i}/{len(tasks)}] {nid} 失败: {e}")
-            time.sleep(5.0)  # 礼貌间隔
+
+            time.sleep(5.0 + random.uniform(5, 8))  # 礼貌间隔
     spider.close()
 
     print(f"完成 → {note_csv}")
@@ -84,4 +86,4 @@ async def main(KEYWORD,MAX_NOTES):
 
 
 if __name__ == "__main__":
-    asyncio.run(main('美食', 1))
+    asyncio.run(main('美食', 20))
