@@ -1,2 +1,0 @@
-﻿note_id,comment_json
-6831c633000000002301241b,"ERROR: HTTPSConnectionPool(host='edith.xiaohongshu.com', port=443): Max retries exceeded with url: /api/sns/web/v2/comment/page?note_id=6831c633000000002301241b&cursor=&top_comment_id=&image_formats=jpg%2Cwebp%2Cavif&xsec_token=ABYk_mESdrNgA6nh3gD4un2ayBDHQjebJsAM9v9ofaenQ%3D (Caused by ProtocolError('Connection aborted.', ConnectionAbortedError(10053, '你的主机中的软件中止了一个已建立的连接。', None, 10053, None)))"

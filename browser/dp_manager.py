@@ -16,7 +16,7 @@ class DPManager:
 
         opts = ChromiumOptions()
         opts.set_local_port(9333)
-        opts.incognito()
+        opts.set_user_data_path(r"./chrome_profile")
         if headless:
             opts.headless()
         self.page = ChromiumPage(opts)
@@ -26,60 +26,20 @@ class DPManager:
 
     # ---------- 登录态 ----------
     def is_logged_in(self) -> bool:
-        """直接以浏览器当前 cookie 为准；每次跑都用浏览器最新 cookie 覆盖 cookies.json。"""
-        # 已经验证过 → 只看 cookie 是否还在，不再做 DOM 检查
+        """打开 explore，等 8s，看是否有登录蒙版。无蒙版即登录成功。"""
         if self._verified:
-            ws = self.get_cookies().get(KEY_COOKIE)
-            return bool(ws)
+            return bool(self.get_cookies().get(KEY_COOKIE))
 
-        # === 第一轮：从 cookies.json 读 web_session，先注入浏览器再校验 ===
-        print("第一轮：从 cookies.json 读取 web_session 校验")
-        ws_from_file = self._read_ws_from_file()
-        if ws_from_file:
-            # 关键顺序：先注入 cookies（冷注入），再导航校验，这样 UI 也是登录态
-            self._inject_cookies_into_browser()
-            # 确认浏览器里真的有 web_session
-            ws_in_browser = self.get_cookies().get(KEY_COOKIE, "")
-            if ws_in_browser != ws_from_file:
-                print(f"cookie 注入失败（浏览器 ws={ws_in_browser[:20]}），走扫码")
-            elif self._verify_via_api(ws_from_file):
-                print(f"web_session: {ws_from_file}，cookies.json 有效，API 校验通过")
-                self.page.get(f"{XHS_BASE}/explore")
-                time.sleep(2)
-                if self._has_login_mask():
-                    print("⚠ 检测到登录蒙版，UI 未真登录，强制走扫码")
-                else:
-                    self._save_cookies()
-                    self._verified = True
-                    return True
-
-        # === 第二轮：用浏览器 profile 当前 cookie 校验 ===
-        print("第一轮失败，改用浏览器当前 cookie 再校验一次")
-        if XHS_BASE not in (self.page.url or ""):
-            self.page.get(f"{XHS_BASE}/explore")
-            time.sleep(2)
-
-        ws_from_browser = self.get_cookies().get(KEY_COOKIE)
-        if ws_from_browser and ws_from_browser != ws_from_file \
-                and self._verify_via_api(ws_from_browser):
-            print(f"web_session: {ws_from_browser}，浏览器 cookie API 校验通过")
-            # UI 蒙版兜底：导航 explore + 探一下 search_result，任一命中蒙版都判未登录
-            self.page.get(f"{XHS_BASE}/explore")
-            time.sleep(2)
-            mask1 = self._has_login_mask()
-            self.page.get(f"{XHS_BASE}/search_result?keyword=test&source=web_explore_feed")
-            time.sleep(2)
-            mask2 = self._has_login_mask()
-            if mask1 or mask2:
-                print("⚠ 浏览器 UI 仍有登录蒙版，强制走扫码")
-            else:
-                self._save_cookies()
-                self.log.info(f"已刷新 {COOKIE_FILE.name}")
-                self._verified = True
-                return True
-
-        print("两轮校验都失败，保留旧 cookies.json，准备扫码登录")
-        return False
+        print("打开 explore 页检测登录蒙版")
+        self.page.get(f"{XHS_BASE}/explore")
+        time.sleep(8)
+        if self._has_login_mask():
+            print("⚠ 检测到登录蒙版，需要扫码登录")
+            return False
+        print("未检测到登录蒙版，登录成功")
+        self._save_cookies()
+        self._verified = True
+        return True
 
     def _has_login_mask(self) -> bool:
         """检测当前页面是否存在登录蒙版/扫码弹窗。命中任一选择器即视为未登录。"""
@@ -179,15 +139,15 @@ class DPManager:
         if not self._has_login_mask():
             self.page.get(f"{XHS_BASE}/explore")
 
-        deadline = time.time() + 120  # 给用户 120s 扫码
+        deadline = time.time() + 150  # 给用户 120s 扫码
         while time.time() < deadline:
             ws = self.get_cookies().get(KEY_COOKIE)
             if ws:
                 print("登录成功")
                 self.log.info(f"web_session={ws}")
 
-                print("请等待10s")
-                time.sleep(10)
+                print("请等待15s")
+                time.sleep(15)
 
                 # 刷新页面 + 重新校验
                 self.page.refresh()

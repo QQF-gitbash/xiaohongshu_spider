@@ -1,6 +1,11 @@
 # 忽略浏览器配置文件
-chrome_profile_test/
+
 chrome_profile/
+# 忽略 data 文件夹下的所有内容
+data/*
+# 但是，不要忽略 .gitkeep 文件
+!data/.gitkeep
+
 
 # 忽略 Cookie 文件
 cookies.json
